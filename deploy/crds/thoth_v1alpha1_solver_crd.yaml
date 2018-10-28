@@ -1,0 +1,26 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: solvers.thoth.ninja
+spec:
+  group: thoth.ninja
+  names:
+    kind: Solver
+    listKind: SolverList
+    plural: solvers
+    singular: solver
+  scope: Namespaced
+  version: v1alpha1
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            packages:
+              type: string
+            includeTransitive:
+              type: boolean
+            output:
+              type: string
+            keepJob:
+              type: boolean

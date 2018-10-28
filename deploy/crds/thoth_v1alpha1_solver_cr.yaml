@@ -1,0 +1,7 @@
+apiVersion: thoth.ninja/v1alpha1
+kind: Solver
+metadata:
+  name: example-solver
+spec:
+  packages: '{"requirements": "selinon==1.0.0rc3\nflask"}'
+  includeTransitive: false
