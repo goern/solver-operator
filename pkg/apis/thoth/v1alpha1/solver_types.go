@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -18,10 +19,13 @@ const (
 
 // SolverSpec defines the desired state of Solver
 type SolverSpec struct {
-	Packages          string `json:"packages"`          // the software stack specification
-	IncludeTransitive bool   `json:"includeTransitive"` // also solve transitive dependencies
-	Output            string `json:"output"`            // output ... FIXME
-	KeepJob           bool   `json:"keepJob"`           // do not delete the Job even if it succeeded
+	// Pod defines the policy for pods owned by the operator.
+	// This field cannot be updated once the CR is created.
+	Pod               *PodPolicy `json:"pod,omitempty"`
+	Packages          string     `json:"packages"`          // the software stack specification
+	IncludeTransitive bool       `json:"includeTransitive"` // also solve transitive dependencies
+	Output            string     `json:"output"`            // output ... FIXME
+	KeepJob           bool       `json:"keepJob"`           // do not delete the Job even if it succeeded
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 }
 
@@ -33,9 +37,9 @@ type SolverStatus struct {
 	Phase          SolverPhase `json:"phase"`
 	StartTime      metav1.Time `json:"startTime"`
 	CompletionTime metav1.Time `json:"completionTime"`
-	Active         int         `json:"active"`
-	Failed         int         `json:"failed"`
-	Succeeded      int         `json:"succeeded"`
+	Active         int         `json:"active,omitempty"`
+	Failed         int         `json:"failed,omitempty"`
+	Succeeded      int         `json:"succeeded,omitempty"`
 	// TODO we should have conditions...
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 }
@@ -59,6 +63,12 @@ type SolverList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Solver `json:"items"`
+}
+
+// PodPolicy defines the policy for pods owned by vault operator.
+type PodPolicy struct {
+	// Resources is the resource requirements for the containers.
+	Resources v1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 func init() {

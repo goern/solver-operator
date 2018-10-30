@@ -166,10 +166,7 @@ func (r *ReconcileSolver) Reconcile(request reconcile.Request) (reconcile.Result
 
 // newSolverJob returns a busybox pod with the same name/namespace as the cr
 func newSolverJob(cr *thothv1alpha1.Solver) *batchv1.Job {
-	labels := map[string]string{
-		"app":       "thoth",
-		"component": "solver-f27",
-	}
+	labels := labelsForSolverJob(cr.Name)
 	return &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Job",
@@ -228,4 +225,10 @@ func newSolverJob(cr *thothv1alpha1.Solver) *batchv1.Job {
 		},
 		// Optional: JobStatus:,
 	}
+}
+
+// labelsForSolverJob returns the labels for selecting the resources
+// belonging to the given Solver CR name.
+func labelsForSolverJob(name string) map[string]string {
+	return map[string]string{"app": "thoth", "component": "solver-f27", "solver": name}
 }

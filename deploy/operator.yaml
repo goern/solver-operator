@@ -15,8 +15,7 @@ spec:
       serviceAccountName: solver-operator
       containers:
         - name: solver-operator
-          # Replace this with the built image name
-          image: REPLACE_IMAGE
+          image: quay.io/goern/solver-operator
           ports:
           - containerPort: 60000
             name: metrics

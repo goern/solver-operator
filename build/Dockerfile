@@ -1,5 +1,4 @@
-FROM alpine:3.6
+FROM registry.fedoraproject.org/fedora:28
 
-USER nobody
 
 ADD build/_output/bin/solver-operator /usr/local/bin/solver-operator

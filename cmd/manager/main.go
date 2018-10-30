@@ -6,9 +6,11 @@ import (
 	"runtime"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/thoth-station/solver-operator/pkg/apis"
 	"github.com/thoth-station/solver-operator/pkg/controller"
+	thothVersion "github.com/thoth-station/solver-operator/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -19,6 +21,7 @@ func printVersion() {
 	log.Printf("Go Version: %s", runtime.Version())
 	log.Printf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
 	log.Printf("operator-sdk Version: %v", sdkVersion.Version)
+	log.Printf("Thoth Solver Operator Version: %v", thothVersion.Version)
 }
 
 func main() {
@@ -31,7 +34,7 @@ func main() {
 	}
 
 	// TODO: Expose metrics port after SDK uses controller-runtime's dynamic client
-	// sdk.ExposeMetricsPort()
+	sdk.ExposeMetricsPort()
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()

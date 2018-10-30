@@ -1,0 +1,24 @@
+apiVersion: thoth.ninja/v1alpha1
+kind: Solver
+metadata:
+  name: example-solver-1
+spec:
+  packages: '{"requirements": "selinon==1.0.0rc3\nflask"}'
+  keepJob: false
+---
+apiVersion: thoth.ninja/v1alpha1
+kind: Solver
+metadata:
+  name: example-solver-2
+spec:
+  packages: '{"requirements": "flask"}'
+  includeTransitive: true
+  keepJob: true
+---
+apiVersion: thoth.ninja/v1alpha1
+kind: Solver
+metadata:
+  name: example-solver-3
+spec:
+  packages: '{"requirements": "tensorflow"}'
+  includeTransitive: true
