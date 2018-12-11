@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:28
+FROM registry.fedoraproject.org/fedora:29
 
 
-ADD build/_output/bin/solver-operator /usr/local/bin/solver-operator
+ADD build/solver-operator /usr/local/bin/solver-operator

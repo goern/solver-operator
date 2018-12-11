@@ -2,7 +2,6 @@ package solver
 
 import (
 	"context"
-	"log"
 	"strconv"
 
 	thothv1alpha1 "github.com/thoth-station/solver-operator/pkg/apis/thoth/v1alpha1"
@@ -18,8 +17,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+var log = logf.Log.WithName("controller_appservice")
 
 // Add creates a new Solver Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -74,7 +76,8 @@ type ReconcileSolver struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileSolver) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	log.Printf("Reconciling Solver %s/%s\n", request.Namespace, request.Name)
+	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.Info("Reconciling Solver %s/%s\n", request.Namespace, request.Name)
 
 	// Fetch the Solver instance
 	instance := &thothv1alpha1.Solver{}
@@ -90,7 +93,7 @@ func (r *ReconcileSolver) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, err
 	}
 
-	log.Printf("Solver.Status.Phase = %s", instance.Status.Phase)
+	reqLogger.Info("Solver.Status.Phase = %s", instance.Status.Phase)
 	if instance.Status.Phase == thothv1alpha1.SolverPhaseCompleted {
 		return reconcile.Result{}, nil
 	}
@@ -107,7 +110,7 @@ func (r *ReconcileSolver) Reconcile(request reconcile.Request) (reconcile.Result
 	found := &batchv1.Job{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		log.Printf("Creating a new Job %s/%s\n", job.Namespace, job.Name)
+		reqLogger.Info("Creating a new Job %s/%s\n", job.Namespace, job.Name)
 		err = r.client.Create(context.TODO(), job)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -117,7 +120,7 @@ func (r *ReconcileSolver) Reconcile(request reconcile.Request) (reconcile.Result
 		instance.Status.Phase = thothv1alpha1.SolverPhaseRunning
 		err := r.client.Update(context.TODO(), instance)
 		if err != nil {
-			log.Printf("failed to update Solver status: %v", err)
+			reqLogger.Info("failed to update Solver status: %v", err)
 			return reconcile.Result{}, err
 		}
 
@@ -127,15 +130,15 @@ func (r *ReconcileSolver) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	// Job already exists - don't requeue
-	log.Printf("Skip reconcile: Job %s/%s already exists", found.Namespace, found.Name)
+	reqLogger.Info("Skip reconcile: Job %s/%s already exists", found.Namespace, found.Name)
 	instance.Status.Phase = thothv1alpha1.SolverPhaseRunning
 	instance.Status.Active = 1
 
 	if found.Status.Succeeded == 1 {
-		log.Printf("Job %s/%s succeeded! Packages was: %s\n", found.Namespace, found.Name, instance.Spec.Packages)
+		reqLogger.Info("Job %s/%s succeeded! Packages was: %s\n", found.Namespace, found.Name, instance.Spec.Packages)
 
 		if !instance.Spec.KeepJob {
-			log.Printf("Deleting Job %s/%s...\n", found.Namespace, found.Name)
+			reqLogger.Info("Deleting Job %s/%s...\n", found.Namespace, found.Name)
 
 			err = r.client.Delete(context.TODO(), job)
 			if err != nil {
@@ -150,14 +153,14 @@ func (r *ReconcileSolver) Reconcile(request reconcile.Request) (reconcile.Result
 		instance.Status.Active = 0
 		err := r.client.Update(context.TODO(), instance)
 		if err != nil {
-			log.Printf("failed to update Solver status: %v", err)
+			reqLogger.Info("failed to update Solver status: %v", err)
 			return reconcile.Result{}, err
 		}
 	}
 
 	err = r.client.Update(context.TODO(), instance)
 	if err != nil {
-		log.Printf("failed to update Solver status: %v", err)
+		reqLogger.Info("failed to update Solver status: %v", err)
 		return reconcile.Result{}, err
 	}
 

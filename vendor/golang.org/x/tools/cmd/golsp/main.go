@@ -10,14 +10,17 @@ package main // import "golang.org/x/tools/cmd/golsp"
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
+	"time"
 
 	"golang.org/x/tools/internal/jsonrpc2"
 	"golang.org/x/tools/internal/lsp"
@@ -27,10 +30,10 @@ var (
 	cpuprofile = flag.String("cpuprofile", "", "write CPU profile to this file")
 	memprofile = flag.String("memprofile", "", "write memory profile to this file")
 	traceFlag  = flag.String("trace", "", "write trace log to this file")
+	logfile    = flag.String("logfile", "", "filename to log to. if value is \"auto\", then logging to a default output file is enabled")
 
 	// Flags for compatitibility with VSCode.
-	logfile = flag.String("logfile", "", "filename to log to")
-	mode    = flag.String("mode", "", "no effect")
+	mode = flag.String("mode", "", "no effect")
 )
 
 func main() {
@@ -86,19 +89,64 @@ func main() {
 		}()
 	}
 
+	out := os.Stderr
 	if *logfile != "" {
-		f, err := os.Create(*logfile)
+		filename := *logfile
+		if filename == "auto" {
+			filename = filepath.Join(os.TempDir(), fmt.Sprintf("golsp-%d.log", os.Getpid()))
+		}
+		f, err := os.Create(filename)
 		if err != nil {
 			log.Fatalf("Unable to create log file: %v", err)
 		}
 		defer f.Close()
 		log.SetOutput(io.MultiWriter(os.Stderr, f))
+		out = f
 	}
-	if err := run(context.Background()); err != nil {
+	if err := lsp.RunServer(
+		context.Background(),
+		jsonrpc2.NewHeaderStream(os.Stdin, os.Stdout),
+		func(direction jsonrpc2.Direction, id *jsonrpc2.ID, elapsed time.Duration, method string, payload *json.RawMessage, err *jsonrpc2.Error) {
+
+			if err != nil {
+				fmt.Fprintf(out, "[Error - %v] %s %s%s %v", time.Now().Format("3:04:05 PM"), direction, method, id, err)
+				return
+			}
+			fmt.Fprintf(out, "[Trace - %v] ", time.Now().Format("3:04:05 PM"))
+			switch direction {
+			case jsonrpc2.Send:
+				fmt.Fprint(out, "Received ")
+			case jsonrpc2.Receive:
+				fmt.Fprint(out, "Sending ")
+			}
+			switch {
+			case id == nil:
+				fmt.Fprint(out, "notification ")
+			case elapsed >= 0:
+				fmt.Fprint(out, "response ")
+			default:
+				fmt.Fprint(out, "request ")
+			}
+			fmt.Fprintf(out, "'%s", method)
+			switch {
+			case id == nil:
+				// do nothing
+			case id.Name != "":
+				fmt.Fprintf(out, " - (%s)", id.Name)
+			default:
+				fmt.Fprintf(out, " - (%d)", id.Number)
+			}
+			fmt.Fprint(out, "'")
+			if elapsed >= 0 {
+				fmt.Fprintf(out, " in %vms", elapsed.Nanoseconds()/1000)
+			}
+			params := string(*payload)
+			if params == "null" {
+				params = "{}"
+			}
+			fmt.Fprintf(out, ".\r\nParams: %s\r\n\r\n\r\n", params)
+		},
+	); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func run(ctx context.Context) error {
-	return lsp.RunServer(ctx, jsonrpc2.NewHeaderStream(os.Stdin, os.Stdout), jsonrpc2.Log)
 }
